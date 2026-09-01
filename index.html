@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prime Taxis Fare Calculator</title>
+<style>
+body{font-family:Arial;background:#f4f5f7;margin:0;padding:15px}
+.box{max-width:520px;margin:auto;background:white;padding:22px;border-radius:20px}
+h1{margin-top:0}
+label{font-weight:bold;display:block;margin-top:15px}
+input,select,button{width:100%;padding:14px;margin-top:6px;
+border:1px solid #ccc;border-radius:10px;font-size:16px;box-sizing:border-box}
+button{background:#111;color:white;font-weight:bold;margin-top:20px}
+.result{background:#eef7ee;padding:18px;margin-top:20px;border-radius:12px}
+.price{font-size:38px;font-weight:bold}
+.error{color:#a00;margin-top:15px}
+</style>
+</head>
+
+<body>
+<div class="box">
+
+<h1>Prime Taxis</h1>
+<p>Waverley By-the-Book Fare Calculator</p>
+
+<label>From</label>
+<input id="from" placeholder="Postcode">
+
+<label>To</label>
+<input id="to" placeholder="Postcode">
+
+<label>Date</label>
+<input id="date" type="date">
+
+<label>Pickup time</label>
+<input id="time" type="time" value="12:00">
+
+<label>Passengers</label>
+<select id="pass">
+<option>1</option><option>2</option><option>3</option>
+<option>4</option><option>5</option><option>6</option>
+<option>7</option><option>8</option>
+</select>
+
+<label>Booking</label>
+<select id="booking">
+<option value="yes">Pre-booked (£0.60)</option>
+<option value="no">Rank / street hire</option>
+</select>
+
+<button onclick="calculate()">CALCULATE FARE</button>
+
+<div id="result" class="result" style="display:none">
+<div>Driving distance</div>
+<div id="miles" class="price">—</div>
+
+<div>By-the-book fare</div>
+<div id="fare" class="price">£—</div>
+
+<div id="details"></div>
+</div>
+
+<div id="error"></div>
+
+</div>
+
+<script>
+
+document.getElementById("date").value =
+new Date().toISOString().slice(0,10);
+
+async function postcode(p){
+
+p=p.trim().replace(/\s/g,"");
+
+let r=await fetch(
+"https://api.postcodes.io/postcodes/"+p
+);
+
+if(!r.ok) throw new Error("Postcode not found: "+p);
+
+let d=await r.json();
+
+return {
+lat:d.result.latitude,
+lon:d.result.longitude
+};
+
+}
+
+async function route(a,b){
+
+let r=await fetch(
+"https://router.project-osrm.org/route/v1/driving/"+
+a.lon+","+a.lat+";"+
+b.lon+","+b.lat+
+"?overview=false"
+);
+
+if(!r.ok) throw new Error("Route could not be calculated.");
+
+let d=await r.json();
+
+return {
+miles:d.routes[0].distance/1609.344,
+minutes:d.routes[0].duration/60
+};
+
+}
+
+function tariff(){
+
+let date=new Date(
+document.getElementById("date").value+
+"T12:00:00"
+);
+
+let time=document.getElementById("time").value;
+let hour=parseInt(time.split(":")[0]);
+
+let day=date.getDay();
+let month=date.getMonth()+1;
+let dom=date.getDate();
+
+/* Christmas and New Year */
+
+if(
+(month==12 && dom==24 && hour>=23) ||
+(month==12 && (dom==25 || dom==26)) ||
+(month==12 && dom==27 && hour<7) ||
+(month==12 && dom==31 && hour>=23) ||
+(month==1 && (dom==1 || (dom==2 && hour<7)))
+){
+return [9.91,5.52,"Tariff 3"];
+}
+
+/* Evening / night */
+
+if(
+hour>=23 ||
+hour<7 ||
+day==0 ||
+(
+month==12 &&
+dom==31 &&
+hour>=18
+)
+){
+return [7.43,4.13,"Tariff 2"];
+}
+
+/* Bank holidays */
+
+let holidays=[
+"2026-01-01","2026-04-03","2026-04-06",
+"2026-05-04","2026-05-25","2026-08-31",
+"2026-12-25","2026-12-28"
+];
+
+if(holidays.includes(
+document.getElementById("date").value
+)){
+return [7.43,4.13,"Tariff 2"];
+}
+
+/* Normal daytime */
+
+return [4.96,2.76,"Tariff 1"];
+
+}
+
+async function calculate(){
+
+document.getElementById("error").innerHTML="";
+document.getElementById("result").style.display="none";
+
+let from=document.getElementById("from").value;
+let to=document.getElementById("to").value;
+
+if(!from||!to){
+document.getElementById("error").innerHTML=
+"Please enter both postcodes.";
+return;
+}
+
+try{
+
+let [a,b]=await Promise.all([
+postcode(from),
+postcode(to)
+]);
+
+let r=await route(a,b);
+
+let t=tariff();
+
+/* Sunday first mile */
+
+let date=new Date(
+document.getElementById("date").value+
+"T12:00:00"
+);
+
+if(
+t[2]=="Tariff 1" &&
+date.getDay()==0
+){
+t[0]=5.56;
+}
+
+/* Mileage */
+
+let fare;
+
+if(r.miles<=1){
+fare=t[0];
+}else{
+fare=t[0]+
+(Math.ceil(r.miles-1)*t[1]);
+}
+
+/* Booking fee */
+
+if(document.getElementById("booking").value=="yes"){
+fare+=0.60;
+}
+
+/* Extra passengers */
+
+let passengers=
+parseInt(document.getElementById("pass").value);
+
+if(passengers>1){
+fare+=(passengers-1)*0.30;
+}
+
+fare=Math.round(fare*100)/100;
+
+document.getElementById("miles").innerText=
+r.miles.toFixed(2)+" miles";
+
+document.getElementById("fare").innerText=
+"£"+fare.toFixed(2);
+
+document.getElementById("details").innerHTML=
+"<b>"+t[2]+"</b><br>"+
+"First mile: £"+t[0].toFixed(2)+"<br>"+
+"Additional mile: £"+t[1].toFixed(2)+"<br>"+
+"Estimated driving time: "+Math.round(r.minutes)+" minutes"+
+"<br>Booking fee and passenger charges included where selected.";
+
+document.getElementById("result").style.display="block";
+
+}catch(e){
+
+document.getElementById("error").innerHTML=
+"<div class='error'>"+e.message+"</div>";
+
+}
+
+}
+
+</script>
+</body>
+</html>
