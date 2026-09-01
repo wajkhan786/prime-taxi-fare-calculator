@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Prime Taxis Fare Calculator</title>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  padding:20px;
+  font-family:Arial,Helvetica,sans-serif;
+  background:#f4f5f7;
+  color:#111;
+}
+
+.box{
+  max-width:620px;
+  margin:auto;
+  background:white;
+  padding:24px;
+  border-radius:18px;
+  box-shadow:0 4px 18px rgba(0,0,0,.08);
+}
+
+h1{
+  margin:0 0 8px;
+  font-size:32px;
+}
+
+.subtitle{
+  margin-bottom:22px;
+  color:#555;
+  font-size:17px;
+}
+
+label{
+  display:block;
+  font-weight:bold;
+  margin-top:16px;
+  margin-bottom:7px;
+}
+
+input,
+select,
+button{
+  width:100%;
+  padding:15px;
+  border-radius:10px;
+  border:1px solid #ccc;
+  font-size:17px;
+}
+
+input:focus,
+select:focus{
+  outline:2px solid #222;
+}
+
+.example{
+  color:#666;
+  font-size:14px;
+  margin-top:5px;
+  line-height:1.4;
+}
+
+button{
+  margin-top:22px;
+  background:#111;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+  border:none;
+}
+
+button:hover{
+  background:#333;
+}
+
+.result{
+  margin-top:25px;
+  background:#eef7ee;
+  padding:22px;
+  border-radius:18px;
+}
+
+.total{
+  font-size:42px;
+  font-weight:bold;
+  margin-bottom:18px;
+}
+
+.tariff{
+  font-size:19px;
+  font-weight:bold;
+  margin-bottom:18px;
+}
+
+.details{
+  font-size:16px;
+  line-height:1.65;
+}
+
+.line{
+  border-top:1px solid #ccc;
+  margin:15px 0;
+}
+
+.note{
+  margin-top:18px;
+  font-size:14px;
+  line-height:1.5;
+  color:#444;
+}
+
+.error{
+  margin-top:18px;
+  color:#a00;
+  font-weight:bold;
+}
+
+.loading{
+  margin-top:18px;
+  color:#555;
+  font-weight:bold;
+}
+
+@media(max-width:600px){
+  body{
+    padding:10px;
+  }
+
+  .box{
+    padding:18px;
+    border-radius:14px;
+  }
+
+  h1{
+    font-size:28px;
+  }
+
+  .total{
+    font-size:38px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+
+<h1>Prime Taxis</h1>
+
+<div class="subtitle">
+Waverley By-the-Book Fare Calculator
+</div>
+
+<label for="from">From</label>
+
+<input
+  id="from"
+  type="text"
+  placeholder="Postcode, road or location"
+>
+
+<div class="example">
+Example: GU7 1AA, Mill Lane Godalming, Godalming Station
+</div>
+
+
+<label for="to">To</label>
+
+<input
+  id="to"
+  type="text"
+  placeholder="Postcode, road or location"
+>
+
+<div class="example">
+Example: GU2 7XX, Royal Surrey County Hospital
+</div>
+
+
+<label for="journeyDate">Journey date</label>
+
+<input
+  id="journeyDate"
+  type="date"
+>
+
+
+<label for="pickupTime">Pickup time</label>
+
+<input
+  id="pickupTime"
+  type="time"
+>
+
+
+<label for="passengers">Passengers</label>
+
+<select id="passengers">
+
+<option value="1">1</option>
+<option value="2">2</option>
+<option value="3">3</option>
+<option value="4">4</option>
+<option value="5">5</option>
+<option value="6">6</option>
+<option value="7">7</option>
+<option value="8">8</option>
+
+</select>
+
+
+<label for="waiting">
+Actual waiting time (minutes)
+</label>
+
+<input
+  id="waiting"
+  type="number"
+  min="0"
+  step="1"
+  value="0"
+  placeholder="0"
+>
+
+<div class="example">
+Enter additional waiting time during the journey, if applicable.
+</div>
+
+
+<label for="booking">Booking</label>
+
+<select id="booking">
+
+<option value="0.60">Pre-booked (£0.60)</option>
+<option value="0">No booking charge (£0.00)</option>
+
+</select>
+
+
+<label for="tariff">Tariff</label>
+
+<select id="tariff">
+
+<option value="automatic">Automatic</option>
+<option value="1">Tariff 1 - Day</option>
+<option value="2">Tariff 2 - Evening / Bank Holiday</option>
+<option value="3">Tariff 3 - Christmas / New Year</option>
+
+</select>
+
+
+<button onclick="calculateFare()">
+CALCULATE FARE
+</button>
+
+
+<div id="loading" class="loading" style="display:none;">
+Calculating route...
+</div>
+
+<div id="error" class="error"></div>
+
+
+<div id="result" class="result" style="display:none;">
+
+<div class="total" id="totalFare">
+£0.00
+</div>
+
+<div class="tariff" id="tariffName">
+Tariff 1 - Day
+</div>
+
+
+<div class="details">
+
+<div>
+<strong>From:</strong>
+<span id="fromResult"></span>
+</div>
+
+<div>
+<strong>To:</strong>
+<span id="toResult"></span>
+</div>
+
+<div>
+<strong>Distance:</strong>
+<span id="distanceResult"></span>
+</div>
+
+<div>
+<strong>Estimated driving time:</strong>
+<span id="timeResult"></span>
+</div>
+
+
+<div class="line"></div>
+
+
+<div>
+<strong>Distance fare:</strong>
+£<span id="distanceFare"></span>
+</div>
+
+<div>
+<strong>Traffic / time:</strong>
+£<span id="trafficFare"></span>
+</div>
+
+<div>
+<strong>Waiting time:</strong>
+£<span id="waitingFare"></span>
+</div>
+
+<div>
+<strong>Booking fee:</strong>
+£<span id="bookingFare"></span>
+</div>
+
+<div>
+<strong>Extra passengers:</strong>
+£<span id="passengerFare"></span>
+</div>
+
+
+<div class="line"></div>
+
+
+<div>
+<strong>Total fare:</strong>
+£<span id="totalFareBottom"></span>
+</div>
+
+
+<div class="line"></div>
+
+
+<div>
+<strong>Meter units by distance:</strong>
+<span id="distanceUnits"></span>
+</div>
+
+<div>
+<strong>Meter units by time:</strong>
+<span id="timeUnits"></span>
+</div>
+
+
+<div class="note">
+Traffic/time is only added when the time used by the journey
+requires more 128-yard/22-second meter units than the distance.
+Waiting time is added separately using the same meter time rate.
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+<script>
+
+/* ============================================================
+   PRIME TAXIS WAVERLEY FARE CALCULATOR
+   ============================================================ */
+
+
+/*
+   Waverley-style meter units:
+
+   1 distance unit = 128 yards
+   1 time unit     = 22 seconds
+
+   The calculator compares distance units with time units.
+*/
+
+
+const YARDS_PER_MILE = 1760;
+
+const METRES_PER_MILE = 1609.344;
+
+const METRES_PER_UNIT =
+  128 * 0.9144;
+
+const SECONDS_PER_UNIT = 22;
+
+
+/*
+   Fare settings.
+
+   These are the rates used by this calculator.
+*/
+
+const TARIFFS = {
+
+  1:{
+    name:"Tariff 1 - Day",
+    unitFare:0.20,
+    baseFare:2.56
+  },
+
+  2:{
+    name:"Tariff 2 - Evening / Bank Holiday",
+    unitFare:0.30,
+    baseFare:3.84
+  },
+
+  3:{
+    name:"Tariff 3 - Christmas / New Year",
+    unitFare:0.40,
+    baseFare:5.12
+  }
+
+};
+
+
+/*
+   Convert today's date/time into a Date object.
+*/
+
+function getJourneyDateTime(){
+
+  const date =
+    document.getElementById("journeyDate").value;
+
+  const time =
+    document.getElementById("pickupTime").value;
+
+  if(!date || !time){
+    return null;
+  }
+
+  return new Date(date + "T" + time);
+
+}
+
+
+/*
+   Determine automatic tariff.
+*/
+
+function getAutomaticTariff(){
+
+  const dt = getJourneyDateTime();
+
+  if(!dt){
+    return 1;
+  }
+
+  const month = dt.getMonth() + 1;
+
+  const day = dt.getDate();
+
+  const hour = dt.getHours();
+
+  const minute = dt.getMinutes();
+
+
+  /*
+     Christmas / New Year
+
+     24 Dec 23:00 to 27 Dec 07:00
+
+     31 Dec 23:00 to 2 Jan 07:00
+  */
+
+  const year = dt.getFullYear();
+
+  const christmasStart =
+    new Date(year,11,24,23,0);
+
+  const christmasEnd =
+    new Date(year,11,27,7,0);
+
+  const newYearStart =
+    new Date(year,11,31,23,0);
+
+  const newYearEnd =
+    new Date(year+1,0,2,7,0);
+
+
+  if(
+    dt >= christmasStart &&
+    dt < christmasEnd
+  ){
+    return 3;
+  }
+
+  if(
+    dt >= newYearStart &&
+    dt < newYearEnd
+  ){
+    return 3;
+  }
+
+
+  /*
+     Tariff 2:
+
+     Monday-Saturday:
+     11pm to 7am
+
+     Sunday:
+     10pm to 7am
+
+     Bank holidays are handled by the
+     manual tariff selector if required.
+  */
+
+  const dayOfWeek =
+    dt.getDay();
+
+  if(dayOfWeek === 0){
+
+    if(
+      hour >= 22 ||
+      hour < 7
+    ){
+      return 2;
+    }
+
+  }else{
+
+    if(
+      hour >= 23 ||
+      hour < 7
+    ){
+      return 2;
+    }
+
+  }
+
+
+  return 1;
+
+}
+
+
+/*
+   Geocode a postcode, road or location name.
+
+   Uses OpenStreetMap/Nominatim.
+*/
+
+async function geocode(place){
+
+  const url =
+    "https://nominatim.openstreetmap.org/search" +
+    "?format=json" +
+    "&limit=1" +
+    "&countrycodes=gb" +
+    "&q=" +
+    encodeURIComponent(place);
+
+  const response =
+    await fetch(url,{
+      headers:{
+        "Accept":"application/json"
+      }
+    });
+
+  if(!response.ok){
+    throw new Error(
+      "Unable to find location."
+    );
+  }
+
+  const data =
+    await response.json();
+
+  if(!data || data.length === 0){
+
+    throw new Error(
+      "Location not found: " + place
+    );
+
+  }
+
+  return {
+    lat:parseFloat(data[0].lat),
+    lon:parseFloat(data[0].lon),
+    name:data[0].display_name
+  };
+
+}
+
+
+/*
+   Calculate driving route using OSRM.
+*/
+
+async function getRoute(from,to){
+
+  const url =
+    "https://router.project-osrm.org/route/v1/driving/" +
+    from.lon + "," + from.lat +
+    ";" +
+    to.lon + "," + to.lat +
+    "?overview=false";
+
+  const response =
+    await fetch(url);
+
+  if(!response.ok){
+
+    throw new Error(
+      "Unable to calculate driving route."
+    );
+
+  }
+
+  const data =
+    await response.json();
+
+  if(
+    data.code !== "Ok" ||
+    !data.routes ||
+    data.routes.length === 0
+  ){
+
+    throw new Error(
+      "No driving route was found."
+    );
+
+  }
+
+  return data.routes[0];
+
+}
+
+
+/*
+   Calculate meter units by distance.
+*/
+
+function calculateDistanceUnits(distanceMiles){
+
+  return (
+    distanceMiles *
+    YARDS_PER_MILE /
+    128
+  );
+
+}
+
+
+/*
+   Calculate meter units by driving time.
+*/
+
+function calculateTimeUnits(seconds){
+
+  return (
+    seconds /
+    SECONDS_PER_UNIT
+  );
+
+}
+
+
+/*
+   Calculate waiting-time units.
+*/
+
+function calculateWaitingUnits(minutes){
+
+  return (
+    minutes * 60 /
+    SECONDS_PER_UNIT
+  );
+
+}
+
+
+/*
+   Main fare calculation.
+*/
+
+async function calculateFare(){
+
+  const fromInput =
+    document.getElementById("from").value.trim();
+
+  const toInput =
+    document.getElementById("to").value.trim();
+
+  const waitingMinutes =
+    parseFloat(
+      document.getElementById("waiting").value
+    ) || 0;
+
+  const passengers =
+    parseInt(
+      document.getElementById("passengers").value
+    );
+
+  const bookingFee =
+    parseFloat(
+      document.getElementById("booking").value
+    ) || 0;
+
+  const tariffChoice =
+    document.getElementById("tariff").value;
+
+
+  const error =
+    document.getElementById("error");
+
+  const loading =
+    document.getElementById("loading");
+
+  const result =
+    document.getElementById("result");
+
+
+  error.textContent = "";
+
+  result.style.display = "none";
+
+
+  if(!fromInput || !toInput){
+
+    error.textContent =
+      "Please enter both From and To locations.";
+
+    return;
+
+  }
+
+
+  if(waitingMinutes < 0){
+
+    error.textContent =
+      "Waiting time cannot be negative.";
+
+    return;
+
+  }
+
+
+  loading.style.display = "block";
+
+
+  try{
+
+    /*
+       Find pickup location.
+    */
+
+    const from =
+      await geocode(fromInput);
+
+
+    /*
+       Find destination.
+    */
+
+    const to =
+      await geocode(toInput);
+
+
+    /*
+       Get driving route.
+    */
+
+    const route =
+      await getRoute(from,to);
+
+
+    /*
+       Route distance.
+    */
+
+    const distanceMiles =
+      route.distance /
+      METRES_PER_MILE;
+
+
+    /*
+       Route driving time.
+    */
+
+    const drivingSeconds =
+      route.duration;
+
+
+    const drivingMinutes =
+      drivingSeconds / 60;
+
+
+    /*
+       Meter units.
+    */
+
+    const distanceUnits =
+      calculateDistanceUnits(
+        distanceMiles
+      );
+
+
+    const timeUnits =
+      calculateTimeUnits(
+        drivingSeconds
+      );
+
+
+    /*
+       Waiting units.
+    */
+
+    const waitingUnits =
+      calculateWaitingUnits(
+        waitingMinutes
+      );
+
+
+    /*
+       Select tariff.
+    */
+
+    let tariffNumber;
+
+    if(tariffChoice === "automatic"){
+
+      tariffNumber =
+        getAutomaticTariff();
+
+    }else{
+
+      tariffNumber =
+        parseInt(tariffChoice);
+
+    }
+
+
+    const tariff =
+      TARIFFS[tariffNumber];
+
+
+    /*
+       Meter calculation.
+
+       The larger of distance units
+       and driving-time units controls
+       the journey portion of the meter.
+    */
+
+    const journeyUnits =
+      Math.max(
+        distanceUnits,
+        timeUnits
+      );
+
+
+    /*
+       Fare for journey.
+
+       Base fare plus additional meter units.
+    */
+
+    let distanceFare =
+      tariff.baseFare;
+
+
+    const additionalUnits =
+      Math.max(
+        0,
+        journeyUnits
+      );
+
+
+    distanceFare +=
+      additionalUnits *
+      tariff.unitFare;
+
+
+    /*
+       Traffic/time component.
+
+       Only show a separate traffic/time
+       charge when time units exceed
+       distance units.
+    */
+
+    let trafficFare = 0;
+
+
+    if(timeUnits > distanceUnits){
+
+      const extraTimeUnits =
+        timeUnits -
+        distanceUnits;
+
+      trafficFare =
+        extraTimeUnits *
+        tariff.unitFare;
+
+    }
+
+
+    /*
+       Waiting time.
+
+       Waiting is additional time and is
+       charged using the same time-unit rate.
+    */
+
+    const waitingFare =
+      waitingUnits *
+      tariff.unitFare;
+
+
+    /*
+       Extra passengers.
+
+       First passenger is included.
+
+       Every passenger after the first:
+       £0.30
+    */
+
+    const extraPassengerCount =
+      Math.max(
+        0,
+        passengers - 1
+      );
+
+
+    const passengerFare =
+      extraPassengerCount *
+      0.30;
+
+
+    /*
+       Total fare.
+    */
+
+    const total =
+      distanceFare +
+      bookingFee +
+      passengerFare +
+      waitingFare;
+
+
+    /*
+       Display results.
+    */
+
+    document.getElementById(
+      "totalFare"
+    ).textContent =
+      "£" + total.toFixed(2);
+
+
+    document.getElementById(
+      "totalFareBottom"
+    ).textContent =
+      total.toFixed(2);
+
+
+    document.getElementById(
+      "tariffName"
+    ).textContent =
+      tariff.name;
+
+
+    document.getElementById(
+      "fromResult"
+    ).textContent =
+      fromInput;
+
+
+    document.getElementById(
+      "toResult"
+    ).textContent =
+      toInput;
+
+
+    document.getElementById(
+      "distanceResult"
+    ).textContent =
+      distanceMiles.toFixed(2) +
+      " miles";
+
+
+    document.getElementById(
+      "timeResult"
+    ).textContent =
+      Math.round(drivingMinutes) +
+      " minutes";
+
+
+    document.getElementById(
+      "distanceFare"
+    ).textContent =
+      distanceFare.toFixed(2);
+
+
+    document.getElementById(
+      "trafficFare"
+    ).textContent =
+      trafficFare.toFixed(2);
+
+
+    document.getElementById(
+      "waitingFare"
+    ).textContent =
+      waitingFare.toFixed(2);
+
+
+    document.getElementById(
+      "bookingFare"
+    ).textContent =
+      bookingFee.toFixed(2);
+
+
+    document.getElementById(
+      "passengerFare"
+    ).textContent =
+      passengerFare.toFixed(2);
+
+
+    document.getElementById(
+      "distanceUnits"
+    ).textContent =
+      distanceUnits.toFixed(1);
+
+
+    document.getElementById(
+      "timeUnits"
+    ).textContent =
+      timeUnits.toFixed(1);
+
+
+    result.style.display =
+      "block";
+
+
+  }catch(e){
+
+    error.textContent =
+      e.message ||
+      "Something went wrong.";
+
+  }
+
+
+  loading.style.display =
+    "none";
+
+}
+
+
+/*
+   Set today's date automatically.
+*/
+
+function setToday(){
+
+  const now =
+    new Date();
+
+  const year =
+    now.getFullYear();
+
+  const month =
+    String(
+      now.getMonth()+1
+    ).padStart(2,"0");
+
+  const day =
+    String(
+      now.getDate()
+    ).padStart(2,"0");
+
+
+  document.getElementById(
+    "journeyDate"
+  ).value =
+    year + "-" +
+    month + "-" +
+    day;
+
+}
+
+
+/*
+   Set current time automatically.
+*/
+
+function setCurrentTime(){
+
+  const now =
+    new Date();
+
+  const hours =
+    String(
+      now.getHours()
+    ).padStart(2,"0");
+
+  const minutes =
+    String(
+      now.getMinutes()
+    ).padStart(2,"0");
+
+
+  document.getElementById(
+    "pickupTime"
+  ).value =
+    hours + ":" +
+    minutes;
+
+}
+
+
+/*
+   Start page.
+*/
+
+setToday();
+
+setCurrentTime();
+
+</script>
+
+</body>
+</html>
